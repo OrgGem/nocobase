@@ -15,6 +15,7 @@ import { MysqlDialect } from './dialects/mysql-dialect';
 import { SqliteDialect } from './dialects/sqlite-dialect';
 import { MariadbDialect } from './dialects/mariadb-dialect';
 import { PostgresDialect } from './dialects/postgres-dialect';
+import { MssqlDialect } from './dialects/mssql-dialect';
 import { PoolOptions } from 'sequelize';
 
 function getEnvValue(key, defaultValue?) {
@@ -136,7 +137,7 @@ export async function checkDatabaseVersion(db: Database) {
 }
 
 export function registerDialects() {
-  [SqliteDialect, MysqlDialect, MariadbDialect, PostgresDialect].forEach((dialect) => {
+  [SqliteDialect, MysqlDialect, MariadbDialect, PostgresDialect, MssqlDialect].forEach((dialect) => {
     Database.registerDialect(dialect);
   });
 }
