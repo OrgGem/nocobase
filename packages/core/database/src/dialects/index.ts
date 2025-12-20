@@ -8,3 +8,4 @@
  */
 
 export * from './base-dialect';
+export * from './mssql-dialect';
