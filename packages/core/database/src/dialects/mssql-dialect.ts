@@ -26,8 +26,9 @@ export class MssqlDialect extends BaseDialect {
 
   getSequelizeOptions(options: DatabaseOptions) {
     const dialectOptions = options.dialectOptions || {};
-    const encrypt = (options as any).encrypt;
-    const dialectInnerOptions = (dialectOptions as any).options || {};
+    const encrypt = (options as DatabaseOptions & { encrypt?: boolean }).encrypt;
+    const dialectInnerOptions =
+      (dialectOptions as { options?: Record<string, unknown> } | undefined)?.options || {};
 
     options.dialectOptions = {
       ...dialectOptions,

@@ -64,11 +64,23 @@ export type MssqlDataSourceOptions = {
   schema?: string;
   tablePrefix?: string;
   encrypt?: boolean;
-  dialectOptions?: any;
-  collectionManager?: any;
+  dialectOptions?: {
+    options?: Record<string, any>;
+    [key: string]: any;
+  };
+  collectionManager?: {
+    database?: Database;
+    [key: string]: any;
+  };
   timezone?: string;
-  logging?: any;
-  [key: string]: any;
+  logging?: boolean | ((...args: any[]) => void);
+  pool?: any;
+  underscored?: boolean;
+  sqlLogger?: any;
+  logger?: any;
+  name?: string;
+  cache?: any;
+  storagePath?: string;
 };
 
 export class MssqlExternalDataSource extends DataSource {
