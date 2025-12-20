@@ -10,6 +10,51 @@
 import { Database } from '@nocobase/database';
 import { DataSource, SequelizeCollectionManager } from '@nocobase/data-source-manager';
 
+const formatDatabaseOptions = (options: MssqlDataSourceOptions = {}) => {
+  const {
+    host,
+    port,
+    username,
+    password,
+    database,
+    schema,
+    tablePrefix,
+    dialectOptions,
+    encrypt,
+    timezone,
+    logging,
+    pool,
+    underscored,
+    sqlLogger,
+    logger,
+  } = options;
+
+  const mergedDialectOptions = {
+    ...(dialectOptions || {}),
+    options: {
+      ...(dialectOptions?.options || {}),
+      ...(encrypt === undefined ? {} : { encrypt }),
+    },
+  };
+
+  return {
+    host,
+    port,
+    username,
+    password,
+    database,
+    schema,
+    tablePrefix,
+    dialectOptions: mergedDialectOptions,
+    dialect: 'mssql',
+    timezone,
+    logging,
+    pool,
+    underscored,
+    logger: sqlLogger || logger,
+  };
+};
+
 export type MssqlDataSourceOptions = {
   host?: string;
   port?: number;
@@ -31,46 +76,7 @@ export class MssqlExternalDataSource extends DataSource {
   introspector: { getCollections: () => Promise<string[]> };
 
   protected buildDatabaseOptions(options: MssqlDataSourceOptions = {}) {
-    const {
-      host,
-      port,
-      username,
-      password,
-      database,
-      schema,
-      tablePrefix,
-      dialectOptions,
-      encrypt,
-      timezone,
-      logging,
-      pool,
-      underscored,
-    } = options;
-
-    const mergedDialectOptions = {
-      ...(dialectOptions || {}),
-      options: {
-        ...(dialectOptions?.options || {}),
-        ...(encrypt === undefined ? {} : { encrypt }),
-      },
-    };
-
-    return {
-      host,
-      port,
-      username,
-      password,
-      database,
-      schema,
-      tablePrefix,
-      dialectOptions: mergedDialectOptions,
-      dialect: 'mssql',
-      timezone,
-      logging,
-      pool,
-      underscored,
-      logger: options.sqlLogger || options.logger,
-    };
+    return formatDatabaseOptions(options);
   }
 
   createCollectionManager(options: MssqlDataSourceOptions = {}) {
@@ -117,17 +123,7 @@ export class MssqlExternalDataSource extends DataSource {
   }
 
   static async testConnection(options?: MssqlDataSourceOptions): Promise<boolean> {
-    const database = new Database({
-      ...(options || {}),
-      dialect: 'mssql',
-      dialectOptions: {
-        ...(options?.dialectOptions || {}),
-        options: {
-          ...(options?.dialectOptions?.options || {}),
-          ...(options?.encrypt === undefined ? {} : { encrypt: options.encrypt }),
-        },
-      },
-    });
+    const database = new Database(formatDatabaseOptions(options));
 
     try {
       await database.sequelize.authenticate();

@@ -7,34 +7,20 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-import { Database } from '@nocobase/database';
 import { Context } from '@nocobase/resourcer';
+import { MssqlExternalDataSource } from '../data-source/MssqlExternalDataSource';
 
 export class ExternalMssqlController {
   async testConnection(ctx: Context) {
     const payload = ctx.action?.params?.values || ctx.request.body || {};
     const options = payload.options || payload;
 
-    const database = new Database({
-      ...options,
-      dialect: 'mssql',
-      dialectOptions: {
-        ...(options?.dialectOptions || {}),
-        options: {
-          ...(options?.dialectOptions?.options || {}),
-          ...(options?.encrypt === undefined ? {} : { encrypt: options.encrypt }),
-        },
-      },
-    });
-
     try {
-      await database.sequelize.authenticate();
+      await MssqlExternalDataSource.testConnection(options);
       ctx.body = { status: 'success' };
     } catch (error) {
       ctx.status = 400;
       ctx.body = { status: 'error', message: error.message };
-    } finally {
-      await database.close();
     }
   }
 }

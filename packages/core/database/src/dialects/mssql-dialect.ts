@@ -17,7 +17,7 @@ export class MssqlDialect extends BaseDialect {
     return {
       sql: "SELECT CAST(SERVERPROPERTY('ProductVersion') AS VARCHAR) AS version",
       get: (v: string) => {
-        const m = /([\\d.]+)/.exec(v);
+        const m = /([\d.]+)/.exec(v);
         return m?.[0] || v;
       },
       version: '>=12.0.0',
