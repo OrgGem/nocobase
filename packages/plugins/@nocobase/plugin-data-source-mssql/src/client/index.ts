@@ -19,7 +19,7 @@ export class PluginDataSourceMssqlClient extends Plugin {
       name: 'mssql',
       label: 'External MSSQL',
       DataSourceSettingsForm: MssqlConfigForm,
-      disableTestConnection: true,
+      disableTestConnection: false,
     });
   }
 }

@@ -127,7 +127,7 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
               },
               encrypt: {
                 type: 'boolean',
-                title: 'Encrypt',
+                title: t('Encrypt'),
                 'x-decorator': 'FormItem',
                 'x-component': 'Checkbox',
               },

@@ -28,6 +28,7 @@ export type MssqlDataSourceOptions = {
 
 export class MssqlExternalDataSource extends DataSource {
   database: Database;
+  introspector: { getCollections: () => Promise<string[]> };
 
   protected buildDatabaseOptions(options: MssqlDataSourceOptions = {}) {
     const {
@@ -103,7 +104,7 @@ export class MssqlExternalDataSource extends DataSource {
 
   async load() {
     await super.load();
-    this['introspector'] = this.createDatabaseIntrospector(this.database);
+    this.introspector = this.createDatabaseIntrospector(this.database);
   }
 
   publicOptions() {
