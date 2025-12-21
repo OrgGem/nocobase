@@ -10,6 +10,16 @@
 import { Database } from '@nocobase/database';
 import { DataSource, SequelizeCollectionManager } from '@nocobase/data-source-manager';
 
+const MSSQL_DRIVER_NAME = 'tedious';
+
+const resolveMssqlDriverPath = () => {
+  try {
+    return require.resolve(MSSQL_DRIVER_NAME, { paths: [process.cwd(), __dirname] });
+  } catch (e) {
+    return undefined;
+  }
+};
+
 const formatDatabaseOptions = (options: MssqlDataSourceOptions = {}) => {
   const {
     host,
@@ -29,6 +39,7 @@ const formatDatabaseOptions = (options: MssqlDataSourceOptions = {}) => {
     logger,
   } = options;
 
+  const dialectModulePath = resolveMssqlDriverPath();
   const mergedDialectOptions = {
     ...(dialectOptions || {}),
     options: {
@@ -45,6 +56,7 @@ const formatDatabaseOptions = (options: MssqlDataSourceOptions = {}) => {
     database,
     schema,
     tablePrefix,
+    ...(dialectModulePath ? { dialectModulePath } : {}),
     dialectOptions: mergedDialectOptions,
     dialect: 'mssql',
     timezone,
