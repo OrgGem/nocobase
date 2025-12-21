@@ -9,15 +9,31 @@
 
 import { Database } from '@nocobase/database';
 import { DataSource, SequelizeCollectionManager } from '@nocobase/data-source-manager';
+import fs from 'fs';
+import path from 'path';
 
 const MSSQL_DRIVER_NAME = 'tedious';
 
 const resolveMssqlDriverPath = () => {
-  try {
-    return require.resolve(MSSQL_DRIVER_NAME, { paths: [process.cwd(), __dirname] });
-  } catch (e) {
-    return undefined;
+  const candidates = [
+    path.join(__dirname, '../tedious'),
+    path.join(__dirname, '../../node_modules'),
+    process.cwd(),
+    __dirname,
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const basePath = fs.existsSync(candidate) ? candidate : undefined;
+      if (basePath) {
+        return require.resolve(MSSQL_DRIVER_NAME, { paths: [basePath] });
+      }
+    } catch (e) {
+      // continue searching
+    }
   }
+
+  return undefined;
 };
 
 const formatDatabaseOptions = (options: MssqlDataSourceOptions = {}) => {

@@ -7,6 +7,9 @@
   "description": "External MSSQL data source support for NocoBase.",
   "license": "AGPL-3.0",
   "main": "./dist/server/index.js",
+  "scripts": {
+    "postbuild": "node ./scripts/copy-tedious.js"
+  },
   "keywords": [
     "Data sources"
   ],
