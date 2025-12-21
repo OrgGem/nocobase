@@ -14,10 +14,12 @@ import { Database } from '@nocobase/database';
 import { MssqlDialect } from './dialects/mssql-dialect';
 
 export class PluginDataSourceMssqlServer extends Plugin {
-  async afterLoad() {
+  async beforeLoad() {
     Database.registerDialect(MssqlDialect);
     this.app.dataSourceManager.factory.register('mssql', MssqlExternalDataSource);
+  }
 
+  async load() {
     const controller = new ExternalMssqlController();
 
     this.app.resourcer.define({
