@@ -12,7 +12,6 @@ import { SchemaComponent, useAPIClient } from '@nocobase/client';
 import { useForm } from '@formily/react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { NAMESPACE } from '@nocobase/plugin-data-source-manager/client/locale';
 
 type MssqlConfigFormProps = {
   CollectionsTableField: React.ComponentType<any>;
@@ -24,6 +23,7 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
   const api = useAPIClient();
   const form = useForm();
   const { t } = useTranslation();
+  const NAMESPACE = 'data-source-manager';
   const { CollectionsTable, createCollectionsSchema, Text, addAllCollectionsSchema } = CollectionsTableField({
     NAMESPACE,
     t,
