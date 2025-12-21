@@ -8,10 +8,14 @@
   "license": "AGPL-3.0",
   "main": "./dist/server/index.js",
   "scripts": {
-    "postbuild": "node ./scripts/copy-tedious.js"
+    "postbuild": "node ./scripts/copy-tedious.js",
+    "prepack": "node ./scripts/copy-tedious.js"
   },
   "keywords": [
     "Data sources"
+  ],
+  "files": [
+    "dist"
   ],
   "dependencies": {
     "tedious": "^18.6.1"
