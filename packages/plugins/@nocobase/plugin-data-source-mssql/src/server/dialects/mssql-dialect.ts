@@ -7,8 +7,7 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-import { BaseDialect } from './base-dialect';
-import { DatabaseOptions } from '../database';
+import { BaseDialect, DatabaseOptions } from '@nocobase/database';
 
 export class MssqlDialect extends BaseDialect {
   static dialectName = 'mssql';
