@@ -13,6 +13,9 @@
   "dependencies": {
     "tedious": "^18.6.1"
   },
+  "bundleDependencies": [
+    "tedious"
+  ],
   "bundledDependencies": [
     "tedious"
   ],
