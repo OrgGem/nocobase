@@ -12,6 +12,7 @@ import { SchemaComponent, useAPIClient } from '@nocobase/client';
 import { useForm } from '@formily/react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { NAMESPACE } from '@nocobase/plugin-data-source-manager/client/locale';
 
 type MssqlConfigFormProps = {
   CollectionsTableField: React.ComponentType<any>;
@@ -23,6 +24,10 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
   const api = useAPIClient();
   const form = useForm();
   const { t } = useTranslation();
+  const { CollectionsTable, createCollectionsSchema, Text, addAllCollectionsSchema } = CollectionsTableField({
+    NAMESPACE,
+    t,
+  });
   const handleTestConnection = useCallback(async () => {
     await form.submit();
     const values = form.values;
@@ -49,8 +54,12 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
         handleTestConnection,
         from,
         t,
+        CollectionsTable,
+        createCollectionsSchema,
+        Text,
+        addAllCollectionsSchema,
       }}
-      components={{ CollectionsTableField }}
+      components={{ CollectionsTable, Text }}
       schema={{
         type: 'object',
         properties: {
@@ -153,20 +162,7 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                 },
                 title: t('Test connection'),
               },
-              collections: {
-                type: 'array',
-                title: t('Collections'),
-                'x-decorator': 'FormItem',
-                'x-component': 'CollectionsTableField',
-                'x-component-props': {
-                  loadCollections: '{{loadCollections}}',
-                  from: '{{from}}',
-                  dataSourceKey: '{{ $form.values?.key }}',
-                  options: '{{ $form.values?.options }}',
-                  formValues: '{{ $form.values }}',
-                  formSetValues: '{{ $form.setValues }}',
-                },
-              },
+              collections: '{{createCollectionsSchema(from, loadCollections)}}',
             },
           },
         },
