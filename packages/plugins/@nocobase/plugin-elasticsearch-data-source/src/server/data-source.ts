@@ -56,8 +56,10 @@ class HttpElasticsearchClient {
     let parsed: any = undefined;
     try {
       parsed = text ? JSON.parse(text) : undefined;
-    } catch {
+    } catch (error) {
       parsed = text;
+      // eslint-disable-next-line no-console
+      console.warn('Failed to parse Elasticsearch response', error);
     }
     return {
       status: res.status,
@@ -106,8 +108,8 @@ class HttpElasticsearchClient {
     return this.request(`/${encodeURIComponent(index)}/_doc/${encodeURIComponent(id)}`, { method: 'DELETE' });
   };
 
-  count = async ({ index, query }: { index: string; query: any }) => {
-    return this.request(`/${encodeURIComponent(index)}/_count`, { method: 'POST', body: query });
+  count = async ({ index, body }: { index: string; body: any }) => {
+    return this.request(`/${encodeURIComponent(index)}/_count`, { method: 'POST', body });
   };
 
   ping = async () => {

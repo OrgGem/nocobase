@@ -249,16 +249,18 @@ export class ElasticsearchRepository implements IRepository {
       return this.findOne({ filterByTk });
     }
 
-    const targets = await this.find({ filter, limit: options?.limit || 1000, offset: options?.offset || 0 });
+    const targets = await this.find({ filter, limit: options?.limit ?? 100, offset: options?.offset || 0 });
     const ids = targets.map((item: any) => item.id);
-    for (const id of ids) {
-      await this.client.update({
-        index: this.index,
-        id,
-        doc: values || {},
-        refresh: true,
-      });
-    }
+    await Promise.all(
+      ids.map((id) =>
+        this.client.update({
+          index: this.index,
+          id,
+          doc: values || {},
+          refresh: true,
+        }),
+      ),
+    );
     return targets.length ? this.find({ filter: { id: { $in: ids } }, limit: ids.length }) : [];
   }
 
@@ -276,14 +278,16 @@ export class ElasticsearchRepository implements IRepository {
       return;
     }
 
-    const targets = await this.find({ filter, limit: options?.limit || 1000, offset: options?.offset || 0 });
-    for (const item of targets) {
-      await this.client.delete({
-        index: this.index,
-        id: item.id,
-        refresh: true,
-      });
-    }
+    const targets = await this.find({ filter, limit: options?.limit ?? 100, offset: options?.offset || 0 });
+    await Promise.all(
+      targets.map((item) =>
+        this.client.delete({
+          index: this.index,
+          id: item.id,
+          refresh: true,
+        }),
+      ),
+    );
     return;
   }
 
@@ -291,7 +295,9 @@ export class ElasticsearchRepository implements IRepository {
     const { filter } = options || {};
     const res: any = await this.client.count({
       index: this.index,
-      query: this.buildQuery(filter),
+      body: {
+        query: this.buildQuery(filter),
+      },
     });
     const body = res?.body || res || {};
     return body?.count ?? 0;
