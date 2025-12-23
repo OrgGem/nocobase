@@ -26,9 +26,7 @@ const CollectionsTable = observer((tableProps: any) => {
 
   const { NAMESPACE, t } = tableProps;
   const defaultAddAllCollections =
-    tableProps.formValues?.options?.addAllCollections === undefined
-      ? true
-      : tableProps.formValues?.options?.addAllCollections;
+    tableProps.formValues?.addAllCollections ?? tableProps.formValues?.options?.addAllCollections ?? true;
   const [addAllCollections, setaddAllCollections] = useState(defaultAddAllCollections);
 
   const displayCollections = useMemo(() => {
@@ -124,7 +122,17 @@ const CollectionsTable = observer((tableProps: any) => {
     const { dataSourceKey: key, formValues, onChange, from } = tableProps;
     const options = formValues?.options || {};
     const requiredText = t('is required');
-    if (formValues.type !== 'oracle') {
+    if (formValues.type === 'elasticsearch') {
+      if (!key) {
+        message.error(t('Data source name', { ns: NAMESPACE }) + requiredText);
+        return;
+      }
+
+      if (!options.host) {
+        message.error(t('Host', { ns: NAMESPACE }) + requiredText);
+        return;
+      }
+    } else if (formValues.type !== 'oracle') {
       if (!key) {
         message.error(t('Data source name', { ns: NAMESPACE }) + requiredText);
         return;
