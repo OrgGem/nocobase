@@ -43,7 +43,11 @@ class HttpElasticsearchClient {
   private async request(path: string, options: { method?: string; body?: any } = {}) {
     const url = `${this.host.replace(/\/$/, '')}${path}`;
     const { method = 'GET', body } = options;
-    const res = await (global as any).fetch(url, {
+    const fetchFn = (globalThis as any).fetch;
+    if (!fetchFn) {
+      throw new Error('Fetch API is not available in the current runtime');
+    }
+    const res = await fetchFn(url, {
       method,
       headers: this.buildHeaders(!!body),
       body: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
@@ -83,10 +87,12 @@ class HttpElasticsearchClient {
   };
 
   index = async ({ index, id, document }: { index: string; id?: string; document: any }) => {
-    const path = id
-      ? `/${encodeURIComponent(index)}/_doc/${encodeURIComponent(id)}`
-      : `/${encodeURIComponent(index)}/_doc`;
-    return this.request(path, { method: 'PUT', body: document });
+    if (id) {
+      const path = `/${encodeURIComponent(index)}/_doc/${encodeURIComponent(id)}`;
+      return this.request(path, { method: 'PUT', body: document });
+    }
+    const path = `/${encodeURIComponent(index)}/_doc`;
+    return this.request(path, { method: 'POST', body: document });
   };
 
   update = async ({ index, id, doc }: { index: string; id: string; doc: any }) => {

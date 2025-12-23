@@ -33,7 +33,7 @@ export class ElasticsearchRepository implements IRepository {
     this.collection = collection;
     const cm = collection.collectionManager as ElasticsearchCollectionManager;
     this.client = cm.client;
-    this.index = collection['name'] || (collection as any).options?.name;
+    this.index = (collection as any).name || (collection as any).options?.name;
   }
 
   private wrap(hit: any) {
