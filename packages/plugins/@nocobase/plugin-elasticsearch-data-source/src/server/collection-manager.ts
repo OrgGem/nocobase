@@ -25,7 +25,7 @@ const DEFAULT_FIELD_MAP: Record<string, string> = {
 };
 
 export class ElasticsearchCollectionManager extends CollectionManager {
-  public client: Client;
+  public client: any;
 
   constructor(options: { client: any }) {
     super(options);

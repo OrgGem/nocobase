@@ -193,12 +193,12 @@ export class ElasticsearchRepository implements IRepository {
     return { hits, total };
   }
 
-  async find(options: FindOptions = []) {
+  async find(options: FindOptions = {}) {
     const { hits } = await this.search(options);
     return hits.map((hit: any) => this.wrap(hit)).filter(Boolean);
   }
 
-  async findAndCount(options: FindOptions = []) {
+  async findAndCount(options: FindOptions = {}) {
     const { hits, total } = await this.search(options);
     const rows = hits.map((hit: any) => this.wrap(hit)).filter(Boolean);
     return [rows, total];
@@ -287,7 +287,7 @@ export class ElasticsearchRepository implements IRepository {
     return;
   }
 
-  async count(options: FindOptions = []) {
+  async count(options: FindOptions = {}) {
     const { filter } = options || {};
     const res: any = await this.client.count({
       index: this.index,
