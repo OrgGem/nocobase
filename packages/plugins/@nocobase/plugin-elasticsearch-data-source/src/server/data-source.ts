@@ -21,11 +21,13 @@ class HttpElasticsearchClient {
   private host: string;
   private username?: string;
   private password?: string;
+  private logger?: { warn?: (...args: any[]) => void };
 
-  constructor(options: { host: string; username?: string; password?: string }) {
+  constructor(options: { host: string; username?: string; password?: string; logger?: any }) {
     this.host = options.host;
     this.username = options.username;
     this.password = options.password;
+    this.logger = options.logger;
   }
 
   private buildHeaders(hasBody: boolean) {
@@ -45,7 +47,7 @@ class HttpElasticsearchClient {
     const { method = 'GET', body } = options;
     const fetchFn = (globalThis as any).fetch;
     if (!fetchFn) {
-      throw new Error('Fetch API is not available in the current runtime');
+      throw new Error('Fetch API is not available. Please run NocoBase on Node.js 18+ or provide a fetch polyfill.');
     }
     const res = await fetchFn(url, {
       method,
@@ -58,8 +60,7 @@ class HttpElasticsearchClient {
       parsed = text ? JSON.parse(text) : undefined;
     } catch (error) {
       parsed = text;
-      // eslint-disable-next-line no-console
-      console.warn('Failed to parse Elasticsearch response', error);
+      this.logger?.warn?.('Failed to parse Elasticsearch response', error);
     }
     return {
       status: res.status,
@@ -145,6 +146,7 @@ export class ElasticsearchDataSource extends DataSource {
       host,
       username,
       password,
+      logger: (options as any).logger,
     });
   }
 

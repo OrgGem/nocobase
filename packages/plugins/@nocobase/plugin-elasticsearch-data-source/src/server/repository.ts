@@ -16,9 +16,11 @@ type FindOptions = {
   limit?: number;
   offset?: number;
   sort?: any;
+  refresh?: boolean | 'wait_for';
 };
 
 const ES_RANGE_KEYS = ['$gt', '$gte', '$lt', '$lte'];
+const DEFAULT_BATCH_LIMIT = 100;
 
 function isPlainObject(input: any) {
   return input && typeof input === 'object' && !Array.isArray(input);
@@ -224,11 +226,12 @@ export class ElasticsearchRepository implements IRepository {
   async create(options: any) {
     const values = options?.values || {};
     const { id, ...rest } = values || {};
+    const refresh = options?.refresh ?? 'wait_for';
     const response: any = await this.client.index({
       index: this.index,
       id,
       document: rest,
-      refresh: true,
+      refresh,
     });
     const body = response?.body || response || {};
     return this.wrap({ _id: body?._id || id, _source: rest });
@@ -240,16 +243,19 @@ export class ElasticsearchRepository implements IRepository {
       throw new Error('Update requires filter or primary key');
     }
     if (filterByTk) {
+      const refresh = options?.refresh ?? 'wait_for';
       await this.client.update({
         index: this.index,
         id: filterByTk,
         doc: values || {},
-        refresh: true,
+        refresh,
       });
       return this.findOne({ filterByTk });
     }
 
-    const targets = await this.find({ filter, limit: options?.limit ?? 100, offset: options?.offset || 0 });
+    const limit = options?.limit ?? DEFAULT_BATCH_LIMIT;
+    const refresh = options?.refresh ?? 'wait_for';
+    const targets = await this.find({ filter, limit, offset: options?.offset || 0 });
     const ids = targets.map((item: any) => item.id);
     await Promise.all(
       ids.map((id) =>
@@ -257,7 +263,7 @@ export class ElasticsearchRepository implements IRepository {
           index: this.index,
           id,
           doc: values || {},
-          refresh: true,
+          refresh,
         }),
       ),
     );
@@ -270,21 +276,24 @@ export class ElasticsearchRepository implements IRepository {
       throw new Error('Destroy requires filter or primary key');
     }
     if (filterByTk) {
+      const refresh = options?.refresh ?? 'wait_for';
       await this.client.delete({
         index: this.index,
         id: filterByTk,
-        refresh: true,
+        refresh,
       });
       return;
     }
 
-    const targets = await this.find({ filter, limit: options?.limit ?? 100, offset: options?.offset || 0 });
+    const limit = options?.limit ?? DEFAULT_BATCH_LIMIT;
+    const refresh = options?.refresh ?? 'wait_for';
+    const targets = await this.find({ filter, limit, offset: options?.offset || 0 });
     await Promise.all(
       targets.map((item) =>
         this.client.delete({
           index: this.index,
           id: item.id,
-          refresh: true,
+          refresh,
         }),
       ),
     );
