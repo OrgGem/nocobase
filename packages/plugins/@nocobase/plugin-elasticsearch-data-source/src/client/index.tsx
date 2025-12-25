@@ -10,7 +10,8 @@
 import React from 'react';
 import { ISchema, SchemaComponent } from '@nocobase/client';
 import Plugin from '@nocobase/plugin-data-source-manager/client';
-import { Plugin as ClientPlugin, useTranslation } from '@nocobase/client';
+import { useTranslation } from 'react-i18next';
+import { Plugin as ClientPlugin } from '@nocobase/client';
 
 const NAMESPACE = 'data-source-manager';
 
