@@ -65,7 +65,8 @@ export const DatabaseConnectionManagerPane = () => {
 
   const dataSourceCreateCallback = useCallback(
     async (data: any, collections) => {
-      if (!data.options?.addAllCollections) {
+      const addAllCollections = data.options?.addAllCollections ?? data.addAllCollections;
+      if (!addAllCollections) {
         await addDatasourceCollections(api, data.key, { collections, dbOptions: data.options });
       }
       dm.addDataSource(ThirdDataSource, data);
