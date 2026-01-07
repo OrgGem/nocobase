@@ -1,0 +1,36 @@
+{
+  "name": "@nocobase/plugin-data-source-mssql",
+  "displayName": "Data source: MSSQL",
+  "displayName.ru-RU": "Источник данных: MSSQL",
+  "displayName.zh-CN": "数据源：MSSQL",
+  "version": "1.9.30",
+  "description": "External MSSQL data source support for NocoBase.",
+  "license": "AGPL-3.0",
+  "main": "./dist/server/index.js",
+  "scripts": {
+    "postbuild": "node ./scripts/copy-tedious.js",
+    "prepack": "node ./scripts/copy-tedious.js"
+  },
+  "keywords": [
+    "Data sources"
+  ],
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "tedious": "^18.6.1"
+  },
+  "bundleDependencies": [
+    "tedious"
+  ],
+  "bundledDependencies": [
+    "tedious"
+  ],
+  "peerDependencies": {
+    "@nocobase/client": "1.x",
+    "@nocobase/database": "1.x",
+    "@nocobase/plugin-data-source-manager": "1.x",
+    "@nocobase/server": "1.x",
+    "@nocobase/test": "1.x"
+  }
+}
