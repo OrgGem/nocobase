@@ -1,0 +1,22 @@
+{
+  "name": "@nocobase/plugin-elasticsearch-data-source",
+  "displayName": "Data source: Elasticsearch",
+  "displayName.zh-CN": "数据源：Elasticsearch",
+  "description": "Elasticsearch external data source integration for NocoBase.",
+  "version": "1.9.30",
+  "main": "./dist/server/index.js",
+  "homepage": "https://www.elastic.co/elasticsearch",
+  "license": "AGPL-3.0",
+  "dependencies": {},
+  "peerDependencies": {
+    "@nocobase/client": "1.x",
+    "@nocobase/data-source-manager": "1.x",
+    "@nocobase/plugin-data-source-manager": "1.x",
+    "@nocobase/server": "1.x",
+    "@nocobase/test": "1.x"
+  },
+  "keywords": [
+    "Data sources",
+    "Elasticsearch"
+  ]
+}
