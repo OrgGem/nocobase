@@ -209,7 +209,7 @@ export class MssqlExternalDataSource extends DataSource {
       return true;
     } catch (error) {
       // Preserve original error information while providing context
-      const message = error.message || 'Unknown error occurred';
+      const message = error instanceof Error ? error.message : String(error);
       const connectionError = new Error(`Failed to connect to MSSQL database: ${message}`) as Error & { cause?: any };
       connectionError.cause = error;
       throw connectionError;
