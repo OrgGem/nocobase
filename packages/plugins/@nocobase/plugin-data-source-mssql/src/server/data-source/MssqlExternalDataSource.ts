@@ -210,8 +210,7 @@ export class MssqlExternalDataSource extends DataSource {
     } catch (error) {
       // Preserve original error information while providing context
       const message = error.message || 'Unknown error occurred';
-      const connectionError = new Error(`Failed to connect to MSSQL database: ${message}`);
-      // @ts-ignore - cause property is supported in Node.js 16.9.0+
+      const connectionError = new Error(`Failed to connect to MSSQL database: ${message}`) as Error & { cause?: any };
       connectionError.cause = error;
       throw connectionError;
     } finally {
