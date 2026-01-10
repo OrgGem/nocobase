@@ -186,19 +186,19 @@ export class MssqlExternalDataSource extends DataSource {
       throw new Error('Connection options are required to test MSSQL connectivity');
     }
 
-    if (!options.host?.trim()) {
+    if (!options.host || typeof options.host !== 'string' || !options.host.trim()) {
       throw new Error('Host is required to test the connection');
     }
 
-    if (!options.database?.trim()) {
+    if (!options.database || typeof options.database !== 'string' || !options.database.trim()) {
       throw new Error('Database name is required to test the connection');
     }
 
-    if (!options.username?.trim()) {
+    if (!options.username || typeof options.username !== 'string' || !options.username.trim()) {
       throw new Error('Username is required to test the connection');
     }
 
-    if (!options.password?.trim()) {
+    if (!options.password || typeof options.password !== 'string' || !options.password.trim()) {
       throw new Error('Password is required to test the connection');
     }
 
@@ -208,8 +208,12 @@ export class MssqlExternalDataSource extends DataSource {
       await database.sequelize.authenticate();
       return true;
     } catch (error) {
+      // Preserve original error information while providing context
       const message = error.message || 'Unknown error occurred';
-      throw new Error(`Failed to connect to MSSQL database: ${message}`);
+      const connectionError = new Error(`Failed to connect to MSSQL database: ${message}`);
+      // @ts-ignore - cause property is supported in Node.js 16.9.0+
+      connectionError.cause = error;
+      throw connectionError;
     } finally {
       await database.close();
     }
