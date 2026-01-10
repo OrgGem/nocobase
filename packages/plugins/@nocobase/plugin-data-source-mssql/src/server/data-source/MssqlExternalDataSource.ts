@@ -150,6 +150,24 @@ export class MssqlExternalDataSource extends DataSource {
 
   async load() {
     await super.load();
+    
+    // Authenticate database connection
+    try {
+      await this.database.sequelize.authenticate();
+      this.logger?.info?.('MSSQL database connection established successfully');
+    } catch (error) {
+      this.logger?.error?.('Failed to authenticate MSSQL database connection', error);
+      throw error;
+    }
+    
+    // Check database version
+    try {
+      await this.database.checkVersion();
+    } catch (error) {
+      this.logger?.warn?.('Database version check failed', error);
+      // Continue even if version check fails
+    }
+    
     this.introspector = this.createDatabaseIntrospector(this.database);
   }
 
@@ -163,11 +181,35 @@ export class MssqlExternalDataSource extends DataSource {
   }
 
   static async testConnection(options?: MssqlDataSourceOptions): Promise<boolean> {
+    // Validate required options
+    if (!options) {
+      throw new Error('Connection options are required to test MSSQL connectivity');
+    }
+
+    if (!options.host?.trim()) {
+      throw new Error('Host is required to test the connection');
+    }
+
+    if (!options.database?.trim()) {
+      throw new Error('Database name is required to test the connection');
+    }
+
+    if (!options.username?.trim()) {
+      throw new Error('Username is required to test the connection');
+    }
+
+    if (!options.password?.trim()) {
+      throw new Error('Password is required to test the connection');
+    }
+
     const database = new Database(formatDatabaseOptions(options));
 
     try {
       await database.sequelize.authenticate();
       return true;
+    } catch (error) {
+      const message = error.message || 'Unknown error occurred';
+      throw new Error(`Failed to connect to MSSQL database: ${message}`);
     } finally {
       await database.close();
     }
