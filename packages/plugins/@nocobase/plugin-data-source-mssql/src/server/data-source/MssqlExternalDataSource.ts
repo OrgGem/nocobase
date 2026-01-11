@@ -9,6 +9,7 @@
 
 import { Database } from '@nocobase/database';
 import { DataSource, SequelizeCollectionManager } from '@nocobase/data-source-manager';
+import type { Dialect } from 'sequelize';
 import fs from 'fs';
 import path from 'path';
 
@@ -74,7 +75,7 @@ const formatDatabaseOptions = (options: MssqlDataSourceOptions = {}) => {
     tablePrefix,
     ...(dialectModulePath ? { dialectModulePath } : {}),
     dialectOptions: mergedDialectOptions,
-    dialect: 'mssql',
+    dialect: 'mssql' as Dialect,
     timezone,
     logging,
     pool,

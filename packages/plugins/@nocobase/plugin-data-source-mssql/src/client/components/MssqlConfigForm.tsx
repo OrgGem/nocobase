@@ -13,8 +13,17 @@ import { useForm } from '@formily/react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 
+type CollectionsFieldFactoryResult = {
+  CollectionsTable: React.ComponentType<any>;
+  createCollectionsSchema: (from?: 'create' | 'edit', loadCollections?: (key: string) => Promise<any>) => any;
+  Text: React.ComponentType<any>;
+  addAllCollectionsSchema?: any;
+};
+
+type CollectionsFieldFactory = (params: { NAMESPACE: string; t: any }) => CollectionsFieldFactoryResult;
+
 type MssqlConfigFormProps = {
-  CollectionsTableField: React.ComponentType<any>;
+  CollectionsTableField: CollectionsFieldFactory;
   loadCollections: (key: string) => Promise<any>;
   from?: 'create' | 'edit';
 };
