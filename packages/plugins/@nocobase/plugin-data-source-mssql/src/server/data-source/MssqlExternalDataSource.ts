@@ -9,6 +9,7 @@
 
 import { Database } from '@nocobase/database';
 import { DataSource, SequelizeCollectionManager } from '@nocobase/data-source-manager';
+import type { Dialect } from 'sequelize';
 import fs from 'fs';
 import path from 'path';
 
@@ -74,7 +75,7 @@ const formatDatabaseOptions = (options: MssqlDataSourceOptions = {}) => {
     tablePrefix,
     ...(dialectModulePath ? { dialectModulePath } : {}),
     dialectOptions: mergedDialectOptions,
-    dialect: 'mssql',
+    dialect: 'mssql' as Dialect,
     timezone,
     logging,
     pool,
@@ -150,6 +151,24 @@ export class MssqlExternalDataSource extends DataSource {
 
   async load() {
     await super.load();
+    
+    // Authenticate database connection
+    try {
+      await this.database.sequelize.authenticate();
+      this.logger?.info?.('MSSQL database connection established successfully');
+    } catch (error) {
+      this.logger?.error?.('Failed to authenticate MSSQL database connection', error);
+      throw error;
+    }
+    
+    // Check database version
+    try {
+      await this.database.checkVersion();
+    } catch (error) {
+      this.logger?.warn?.('Database version check failed', error);
+      // Continue even if version check fails
+    }
+    
     this.introspector = this.createDatabaseIntrospector(this.database);
   }
 
@@ -163,11 +182,38 @@ export class MssqlExternalDataSource extends DataSource {
   }
 
   static async testConnection(options?: MssqlDataSourceOptions): Promise<boolean> {
+    // Validate required options
+    if (!options) {
+      throw new Error('Connection options are required to test MSSQL connectivity');
+    }
+
+    if (!options.host || typeof options.host !== 'string' || !options.host.trim()) {
+      throw new Error('Host is required to test the connection');
+    }
+
+    if (!options.database || typeof options.database !== 'string' || !options.database.trim()) {
+      throw new Error('Database name is required to test the connection');
+    }
+
+    if (!options.username || typeof options.username !== 'string' || !options.username.trim()) {
+      throw new Error('Username is required to test the connection');
+    }
+
+    if (!options.password || typeof options.password !== 'string' || !options.password.trim()) {
+      throw new Error('Password is required to test the connection');
+    }
+
     const database = new Database(formatDatabaseOptions(options));
 
     try {
       await database.sequelize.authenticate();
       return true;
+    } catch (error) {
+      // Preserve original error information while providing context
+      const message = error instanceof Error ? error.message : String(error);
+      const connectionError = new Error(`Failed to connect to MSSQL database: ${message}`) as Error & { cause?: any };
+      connectionError.cause = error;
+      throw connectionError;
     } finally {
       await database.close();
     }

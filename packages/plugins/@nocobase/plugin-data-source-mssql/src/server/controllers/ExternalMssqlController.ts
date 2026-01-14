@@ -7,7 +7,7 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-import { Context } from '@nocobase/resourcer';
+import { Context } from '@nocobase/actions';
 import { MssqlExternalDataSource } from '../data-source/MssqlExternalDataSource';
 
 export class ExternalMssqlController {
