@@ -275,21 +275,21 @@ export class MssqlExternalDataSource extends DataSource {
   async syncFromDatabase(localData: LocalCollections = {}): Promise<void> {
     const introspector = this.createDatabaseIntrospector(this.database);
     const remoteTables = await introspector.getCollections();
-    const localNames = Object.keys(localData || {});
+    const localNames = Object.keys(localData);
     
-    // If addAllCollections is true (default from UI form), use all remote tables
-    // Otherwise, only use tables that are explicitly in localData
+    // addAllCollections: true means load all remote tables (default from UI form is true)
+    // addAllCollections: false/undefined means only load tables explicitly in localData
     const addAllCollections = (this.options as MssqlDataSourceOptions)?.addAllCollections === true;
     let tablesToLoad: string[];
     
     if (addAllCollections) {
-      // When addAllCollections is true, load all remote tables plus any additional local data
+      // When addAllCollections is explicitly true, load all remote tables plus any additional local data
       tablesToLoad = Array.from(new Set([...remoteTables, ...localNames]));
     } else if (localNames.length > 0) {
-      // When addAllCollections is false but there's local data, only load those tables
+      // When addAllCollections is false/undefined but there's local data, only load those tables
       tablesToLoad = localNames;
     } else {
-      // When addAllCollections is false and no local data, load nothing
+      // When addAllCollections is false/undefined and no local data, load nothing
       // (This is the initial state before user selects specific collections)
       tablesToLoad = [];
     }
