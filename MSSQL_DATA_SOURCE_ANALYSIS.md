@@ -1,231 +1,648 @@
-# MSSQL Data Source Plugin - Analysis and Implementation
+# MSSQL Data Source Plugin - Comprehensive Analysis and Implementation Guide
 
-## Phân tích luồng xử lý (Analysis of Processing Flow)
+> **Tài liệu phân tích và hướng dẫn phát triển plugin MSSQL External Data Source cho NocoBase**
+> 
+> Cập nhật: 2026-01-16
 
-### So sánh giữa hai implementations (Comparison between two implementations)
+---
 
-#### 1. NocoBase Official Plugin (`packages/plugins/@nocobase/plugin-data-source-mssql`)
+## 📋 Mục lục (Table of Contents)
 
-**Kiến trúc (Architecture):**
+1. [Tổng quan](#tổng-quan)
+2. [Cấu trúc File và Thành phần](#cấu-trúc-file-và-thành-phần)
+3. [Luồng Xử lý Chi tiết](#luồng-xử-lý-chi-tiết)
+4. [Các Vấn đề và Giải pháp](#các-vấn-đề-và-giải-pháp)
+5. [Best Practices](#best-practices)
+6. [Testing và Verification](#testing-và-verification)
+
+---
+
+## 🎯 Tổng quan
+
+### Mục tiêu chính (Primary Objectives)
+
+Plugin MSSQL External Data Source được phát triển để:
+
+1. **Kết nối MSSQL Database** - Cho phép NocoBase kết nối với SQL Server databases
+2. **Introspect Schema** - Tự động phát hiện tables, columns, và metadata
+3. **Multi-Schema Support** - Hỗ trợ databases với nhiều schemas (dbo, identity, resx, etc.)
+4. **Field Management** - Cho phép thêm/sửa fields qua UI
+5. **Data Display** - Hiển thị records từ MSSQL trong NocoBase table blocks
+
+### Chức năng chính (Key Features)
+
+- ✅ **Schema-aware introspection** - Xử lý schema-qualified table names
+- ✅ **Collection name normalization** - Chuyển đổi `dbo.Features` → `dbo_Features`
+- ✅ **External collection support** - Không thêm internal fields (id, createdAt, etc.)
+- ✅ **Type mapping** - Mapping MSSQL types sang NocoBase types
+- ✅ **Connection testing** - Verify connection trước khi save
+- ✅ **Version checking** - Đảm bảo SQL Server compatibility (≥12.0.0)
+
+---
+
+## 📁 Cấu trúc File và Thành phần
+
+### Server-side Components
+
+```
+packages/plugins/@nocobase/plugin-data-source-mssql/
+├── src/
+│   ├── server/
+│   │   ├── data-source/
+│   │   │   └── MssqlExternalDataSource.ts    # ⭐ Main data source class
+│   │   ├── dialects/
+│   │   │   └── mssql-dialect.ts               # ⭐ MSSQL dialect implementation
+│   │   ├── controllers/
+│   │   │   └── ExternalMssqlController.ts     # Test connection controller
+│   │   ├── plugin.ts                          # ⭐ Plugin initialization
+│   │   └── utils.ts                           # Utility functions (sanitize)
+│   └── client/
+│       ├── index.tsx                          # ⭐ Client-side registration
+│       └── components/
+│           └── MssqlConfigForm.tsx            # Configuration UI form
+└── package.json
+```
+
+### Thành phần chính và vai trò (Components and Roles)
+
+#### 1. **MssqlExternalDataSource.ts** 
+**Vị trí:** `src/server/data-source/MssqlExternalDataSource.ts`
+
+**Trách nhiệm:**
 - Kế thừa từ `DataSource` base class
-- Sử dụng `MssqlDialect` để xử lý specific MSSQL features
-- Sử dụng `SequelizeCollectionManager` để quản lý collections
-- Bundled `tedious` driver với custom path resolution
+- Quản lý collection manager (SequelizeCollectionManager)
+- Introspect database schema
+- Map MSSQL types sang NocoBase types
+- Handle authentication và version checking
 
-**Trước khi cải tiến (Before improvements):**
-- ❌ Thiếu authentication trong `load()` method
-- ❌ Không kiểm tra database version
-- ❌ Validation yếu trong `testConnection()`
-
-**Sau khi cải tiến (After improvements):**
-- ✅ Có database authentication đầy đủ
-- ✅ Kiểm tra database version
-- ✅ Validation mạnh với type checking
-- ✅ Error handling tốt với error chaining
-
-#### 2. External Plugin (trlongvn/nocobase-plugin-external-datasource-mssql)
-
-**Kiến trúc (Architecture):**
-- Kế thừa từ `SequelizeDataSource` 
-- Có utility function `authenticateDatabase` riêng
-- Validation tốt trong `testConnection()`
-
-**Điểm mạnh (Strengths):**
-- ✅ Authentication rõ ràng trong `load()`
-- ✅ Validation parameters tốt
-- ✅ Error messages chi tiết
-
-## Phân tích Data Source trong NocoBase
-
-### 1. Kiến trúc tổng quan (Overall Architecture)
-
-```
-DataSource (Abstract Base Class)
-  ↓
-  ├── createCollectionManager() - tạo collection manager
-  ├── load() - khởi tạo data source
-  ├── middleware() - xử lý HTTP requests
-  └── close() - đóng kết nối
-
-Database (Core Class)
-  ↓
-  ├── sequelize - Sequelize instance
-  ├── dialect - Database dialect handler
-  └── checkVersion() - Kiểm tra version database
-```
-
-### 2. Luồng kết nối PostgreSQL (PostgreSQL Connection Flow)
-
-**File:** `packages/core/database/src/dialects/postgres-dialect.ts`
-
+**Các method quan trọng:**
 ```typescript
-class PostgresDialect extends BaseDialect {
-  getSequelizeOptions(options) {
-    // 1. Cấu hình hooks
-    options.hooks['afterConnect'].push(async (connection) => {
-      await connection.query('SET search_path TO public;');
-    });
-    return options;
-  }
-
-  getVersionGuard() {
-    // 2. Định nghĩa cách kiểm tra version
-    return {
-      sql: 'select version() as version',
-      get: (v: string) => extractVersion(v),
-      version: '>=10'
-    };
-  }
+class MssqlExternalDataSource extends DataSource {
+  // Tạo collection manager với Database instance
+  createCollectionManager(options): SequelizeCollectionManager
+  
+  // Tạo introspector để khám phá schema
+  createDatabaseIntrospector(db): { getCollections, getFields }
+  
+  // Load và introspect tất cả collections
+  async load(): Promise<void>
+  
+  // Test connection (static method)
+  static async testConnection(options): Promise<boolean>
+  
+  // Map MSSQL types sang NocoBase types
+  private inferFieldType(dbType): { type, interface }
 }
 ```
 
-**Luồng hoạt động (Flow):**
-1. Database constructor → tạo Sequelize instance
-2. `sequelize.authenticate()` → kiểm tra kết nối
-3. `dialect.checkDatabaseVersion()` → verify version
-4. Collections được load
-5. Ready to handle queries
-
-### 3. Implementation cho MSSQL (MSSQL Implementation)
-
-**Điểm mấu chốt (Key Points):**
-
-#### a. Dialect Registration
-```typescript
-// Trong plugin.ts
-Database.registerDialect(MssqlDialect);
-```
-
-#### b. Data Source Registration
-```typescript
-this.app.dataSourceManager.factory.register('mssql', MssqlExternalDataSource);
-```
-
-#### c. Connection Authentication (Đã cải tiến)
+**Key Implementation Details:**
 ```typescript
 async load() {
   await super.load();
   
-  // 1. Authenticate connection - QUAN TRỌNG!
-  try {
-    await this.database.sequelize.authenticate();
-    this.logger?.info?.('MSSQL database connection established successfully');
-  } catch (error) {
-    this.logger?.error?.('Failed to authenticate MSSQL database connection', error);
-    throw error;
-  }
+  // 1. Authenticate database
+  await this.database.sequelize.authenticate();
   
-  // 2. Check version - đảm bảo compatibility
-  try {
-    await this.database.checkVersion();
-  } catch (error) {
-    this.logger?.warn?.('Database version check failed', error);
-  }
+  // 2. Check version compatibility
+  await this.database.checkVersion();
   
-  // 3. Initialize introspector
-  this.introspector = this.createDatabaseIntrospector(this.database);
+  // 3. Introspect collections
+  const collections = await introspector.getCollections();
+  
+  // 4. For each table:
+  for (const table of collections) {
+    // 4.1. Build full name and normalized name
+    const fullTableName = `${schema}.${tableName}`;
+    const collectionName = fullTableName.replace(/\./g, '_');
+    
+    // 4.2. Introspect fields
+    const fields = await introspector.getFields(table);
+    
+    // 4.3. Define collection with special options
+    await this.collectionManager.defineCollection({
+      name: collectionName,           // dbo_Features
+      title: fullTableName,            // dbo.Features
+      tableName: tableName,            // Features
+      schema: schema,                  // dbo
+      autoGenId: false,               // ⚠️ Critical!
+      timestamps: false,              // ⚠️ Critical!
+      introspected: true,
+      isExternal: true,
+      fields
+    });
+  }
 }
 ```
 
-#### d. Version Checking
+#### 2. **mssql-dialect.ts**
+**Vị trí:** `src/server/dialects/mssql-dialect.ts`
+
+**Trách nhiệm:**
+- Định nghĩa MSSQL-specific behaviors
+- Version guard configuration
+- Dialect options processing
+
 ```typescript
-// Trong MssqlDialect
-getVersionGuard() {
-  return {
-    sql: "SELECT CAST(SERVERPROPERTY('ProductVersion') AS VARCHAR) AS version",
-    get: (v: string) => {
-      const m = /([\d.]+)/.exec(v);
-      return m?.[0] || v;
-    },
-    version: '>=12.0.0'  // SQL Server 2014+
+export class MssqlDialect extends BaseDialect {
+  static dialectName = 'mssql';
+  
+  // Định nghĩa cách check version
+  getVersionGuard() {
+    return {
+      sql: "SELECT CAST(SERVERPROPERTY('ProductVersion') AS VARCHAR) AS version",
+      get: (v: string) => {
+        const m = /([\\d.]+)/.exec(v);
+        return m?.[0] || v;
+      },
+      version: '>=12.0.0'  // SQL Server 2014+
+    };
+  }
+  
+  // Xử lý encrypt option
+  getSequelizeOptions(options: DatabaseOptions) {
+    // Merge encrypt setting vào dialectOptions.options
+    options.dialectOptions = {
+      ...dialectOptions,
+      options: {
+        ...dialectInnerOptions,
+        ...(encrypt === undefined ? {} : { encrypt })
+      }
+    };
+    return options;
+  }
+}
+```
+
+#### 3. **plugin.ts**
+**Vị trí:** `src/server/plugin.ts`
+
+**Trách nhiệm:**
+- Register dialect với Database
+- Register data source type với DataSourceManager
+- Define test connection resource
+
+```typescript
+export class PluginDataSourceMssqlServer extends Plugin {
+  async beforeLoad() {
+    // 1. Register dialect
+    Database.registerDialect(MssqlDialect);
+    
+    // 2. Register data source factory
+    this.app.dataSourceManager.factory.register('mssql', MssqlExternalDataSource);
+  }
+  
+  async load() {
+    // 3. Define test connection endpoint
+    this.app.resourcer.define({
+      name: 'external-mssql',
+      actions: {
+        async testConnection(ctx, next) {
+          await controller.testConnection(ctx);
+          await next();
+        }
+      }
+    });
+  }
+}
+```
+
+#### 4. **Client-side: index.tsx**
+**Vị trí:** `src/client/index.tsx`
+
+**Trách nhiệm:**
+- Register MSSQL data source type trên client
+- Configure UI options
+
+```typescript
+export class PluginDataSourceMssqlClient extends Plugin {
+  async load() {
+    const plugin = this.app.pm.get(PluginDataSourceManagerClient);
+    
+    plugin.registerType('mssql', {
+      label: 'Microsoft SQL Server',
+      icon: 'DatabaseOutlined',
+      color: 'blue',
+      DataSourceSettingsForm: MssqlConfigForm,
+      disableTestConnection: false,
+      disableAddFields: false,        // ⭐ Enable "Add field" button
+    });
+  }
+}
+```
+
+---
+
+## 🔄 Luồng Xử lý Chi tiết
+
+### 1. Connection Flow
+
+```
+User creates data source in UI
+    ↓
+Frontend calls /api/dataSources:create
+    ↓
+Server validates and tests connection
+    ↓
+MssqlExternalDataSource.testConnection()
+    ├── Create temporary Database instance
+    ├── Call sequelize.authenticate()
+    ├── Return success/failure
+    └── Close database
+    ↓
+If successful, save to dataSources collection
+    ↓
+Trigger data source load
+    ↓
+MssqlExternalDataSource.load()
+```
+
+### 2. Introspection Flow
+
+```
+load() method execution
+    ↓
+1. Authenticate database
+   await this.database.sequelize.authenticate()
+    ↓
+2. Check version
+   await this.database.checkVersion()
+    ↓
+3. Create introspector
+   introspector = this.createDatabaseIntrospector(db)
+    ↓
+4. Get all tables
+   collections = await introspector.getCollections()
+   // Returns: [
+   //   { tableName: 'Features', schema: 'dbo' },
+   //   { tableName: 'Users', schema: 'identity' },
+   //   ...
+   // ]
+    ↓
+5. For each table:
+   ├── Build fullTableName: "dbo.Features"
+   ├── Build collectionName: "dbo_Features"
+   ├── Get fields: await introspector.getFields(table)
+   ├── Infer field types using type mapping
+   ├── Define collection with options:
+   │   ├── name: collectionName
+   │   ├── title: fullTableName
+   │   ├── tableName: tableName (without schema)
+   │   ├── schema: schema
+   │   ├── autoGenId: false
+   │   ├── timestamps: false
+   │   └── fields: [...mapped fields]
+   └── Register with collectionManager
+    ↓
+6. Collections ready for use
+```
+
+### 3. Query Flow (Fetching Records)
+
+```
+Frontend: GET /api/dbo_Features:list
+    ↓
+Set header: x-data-source: test
+    ↓
+DataSourceManager middleware
+    ├── Read x-data-source header
+    ├── Get data source instance
+    └── Set ctx.dataSource
+    ↓
+Resource middleware
+    ├── Parse resource name: "dbo_Features"
+    ├── Get collection from collectionManager
+    └── collection.tableName = "Features", schema = "dbo"
+    ↓
+Execute Sequelize query
+    ├── Build SQL: SELECT * FROM [dbo].[Features]
+    └── Return results
+    ↓
+Response to frontend
+```
+
+---
+
+## 🐛 Các Vấn đề và Giải pháp
+
+### Problem 1: Invalid object name 'dbo.Features'
+
+**Nguyên nhân:**
+- Collection được define với `tableName: "dbo.Features"`
+- Sequelize generate SQL: `SELECT * FROM [dbo.Features]` (sai!)
+- Đúng phải là: `SELECT * FROM [dbo].[Features]`
+
+**Giải pháp:**
+```typescript
+// ❌ WRONG:
+tableName: fullTableName  // "dbo.Features"
+
+// ✅ CORRECT:
+tableName: tableName,     // "Features"
+schema: schema            // "dbo"
+```
+
+### Problem 2: Collections không hiển thị (404 errors)
+
+**Nguyên nhân:**
+- Collection name có dấu chấm: `dbo.Features`
+- Resource name: `dbo.Features:list`
+- NocoBase parse thành `dbo` + `Features:list` (sai!)
+
+**Giải pháp:**
+```typescript
+// Normalize collection name
+const fullTableName = `${schema}.${tableName}`;  // "dbo.Features"
+const collectionName = fullTableName.replace(/\./g, '_');  // "dbo_Features"
+
+// Collection definition
+{
+  name: collectionName,    // "dbo_Features" - for NocoBase
+  title: fullTableName,    // "dbo.Features" - for display
+  tableName: tableName,    // "Features" - for SQL
+  schema: schema           // "dbo" - for SQL
+}
+```
+
+### Problem 3: "Only one autoincrement field allowed"
+
+**Nguyên nhân:**
+- NocoBase tự động thêm field `id` (autoIncrement)
+- Table đã có primary key (autoIncrement)
+- Conflict!
+
+**Giải pháp:**
+```typescript
+// Collection options
+{
+  autoGenId: false,     // ⚠️ Don't add automatic id field
+  timestamps: false,    // ⚠️ Don't add createdAt/updatedAt
+  introspected: true,   // ⚠️ Mark as introspected
+  isExternal: true      // ⚠️ Mark as external
+}
+```
+
+### Problem 4: "Add field" button không hiện
+
+**Nguyên nhân:**
+- Client-side chưa được configure để enable field management
+- `disableAddFields` không được set
+
+**Giải pháp:**
+```typescript
+// In client/index.tsx
+plugin.registerType('mssql', {
+  // ... other options
+  disableAddFields: false,  // ⭐ Enable "Add field" button
+});
+```
+
+### Problem 5: Type mapping errors (bigint)
+
+**Nguyên nhân:**
+- MSSQL type: `BIGINT`
+- NocoBase type: `bigInt` (case-sensitive!)
+
+**Giải pháp:**
+```typescript
+private inferFieldType(dbType: string) {
+  const map = {
+    'bigint': { type: 'bigInt', interface: 'number' },  // ✅ Correct case
+    // ... other mappings
   };
 }
 ```
 
-#### e. Connection Testing (Đã cải tiến)
+---
+
+## 📋 Best Practices
+
+### 1. Authentication và Version Checking
+
 ```typescript
-static async testConnection(options?: MssqlDataSourceOptions): Promise<boolean> {
-  // 1. Validate tất cả required parameters
-  if (!options) throw new Error('Connection options are required');
-  if (!options.host || !options.host.trim()) throw new Error('Host is required');
-  if (!options.database || !options.database.trim()) throw new Error('Database is required');
-  if (!options.username || !options.username.trim()) throw new Error('Username is required');
-  if (!options.password || !options.password.trim()) throw new Error('Password is required');
+async load() {
+  await super.load();
   
-  // 2. Create temporary database instance
+  // ✅ ALWAYS authenticate first
+  try {
+    await this.database.sequelize.authenticate();
+    this.logger?.info?.('Connection established');
+  } catch (error) {
+    this.logger?.error?.('Authentication failed', sanitize(error));
+    throw error;
+  }
+  
+  // ✅ Check version compatibility
+  try {
+    await this.database.checkVersion();
+  } catch (error) {
+    this.logger?.warn?.('Version check failed', sanitize(error));
+  }
+}
+```
+
+### 2. Error Handling với Error Chaining
+
+```typescript
+try {
+  await database.sequelize.authenticate();
+} catch (error) {
+  // ✅ Preserve original error
+  const message = error instanceof Error ? error.message : String(error);
+  const connectionError = new Error(`Failed to connect: ${message}`) as Error & { cause?: any };
+  connectionError.cause = error;  // ⭐ Chain original error
+  throw connectionError;
+}
+```
+
+### 3. Validation đầy đủ
+
+```typescript
+static async testConnection(options?: MssqlDataSourceOptions) {
+  // ✅ Validate type và empty string
+  if (!options) throw new Error('Options required');
+  if (!options.host || typeof options.host !== 'string' || !options.host.trim()) {
+    throw new Error('Host is required');
+  }
+  if (!options.database || typeof options.database !== 'string' || !options.database.trim()) {
+    throw new Error('Database is required');
+  }
+  // ... validate all required fields
+}
+```
+
+### 4. Schema-aware Collection Definition
+
+```typescript
+// ✅ CORRECT pattern
+const fullTableName = typeof table === 'string' 
+  ? table 
+  : (table.schema ? `${table.schema}.${table.tableName}` : table.tableName);
+
+const collectionName = fullTableName.replace(/\./g, '_');
+
+const collectionOptions = {
+  name: collectionName,              // Internal name: "dbo_Features"
+  title: fullTableName,              // Display name: "dbo.Features"
+  tableName: typeof table === 'string' ? table : table.tableName,  // SQL: "Features"
+  schema: typeof table === 'string' ? undefined : table.schema,    // SQL: "dbo"
+  autoGenId: false,
+  timestamps: false,
+  introspected: true,
+  isExternal: true,
+  fields: [...]
+};
+```
+
+### 5. Resource Cleanup
+
+```typescript
+static async testConnection(options) {
   const database = new Database(formatDatabaseOptions(options));
   
-  // 3. Test connection
   try {
     await database.sequelize.authenticate();
     return true;
   } catch (error) {
-    // 4. Preserve error information
-    const message = error instanceof Error ? error.message : String(error);
-    const connectionError = new Error(`Failed to connect: ${message}`) as Error & { cause?: any };
-    connectionError.cause = error;
-    throw connectionError;
+    throw error;
   } finally {
+    // ✅ ALWAYS cleanup
     await database.close();
   }
 }
 ```
 
-## Các thay đổi đã thực hiện (Changes Made)
+---
 
-### 1. Authentication Flow
-- **Trước:** Không authenticate trong `load()`
-- **Sau:** Gọi `database.sequelize.authenticate()` và xử lý errors
+## 🧪 Testing và Verification
 
-### 2. Version Checking
-- **Trước:** Không check version
-- **Sau:** Gọi `database.checkVersion()` với proper error handling
+### Test Script 1: Connection Test
 
-### 3. Validation
-- **Trước:** Validation đơn giản
-- **Sau:** Type checking + empty string checking + clear error messages
+```javascript
+const MssqlExternalDataSource = require('./MssqlExternalDataSource');
 
-### 4. Error Handling
-- **Trước:** Basic error messages
-- **Sau:** Error chaining với `cause` property, type-safe error handling
+const options = {
+  host: 'localhost',
+  port: 1433,
+  username: 'sa',
+  password: 'Password123',
+  database: 'TestDB'
+};
 
-## Best Practices đã áp dụng
+// Should succeed
+await MssqlExternalDataSource.testConnection(options);
 
-1. ✅ **Authentication First**: Luôn authenticate trước khi sử dụng
-2. ✅ **Version Checking**: Verify database compatibility
-3. ✅ **Proper Validation**: Type + empty string checking
-4. ✅ **Error Preservation**: Sử dụng error chaining
-5. ✅ **Logging**: Info/error/warn levels phù hợp
-6. ✅ **Resource Cleanup**: Always close database in finally block
-7. ✅ **Type Safety**: Proper type assertions thay vì @ts-ignore
-
-## Testing Recommendations
-
-```typescript
-// Test authentication
-const ds = new MssqlExternalDataSource(options);
-await ds.load(); // Should authenticate successfully
-
-// Test connection validation
-await MssqlExternalDataSource.testConnection(validOptions); // Should return true
-await MssqlExternalDataSource.testConnection(invalidOptions); // Should throw with clear message
-
-// Test error preservation
-try {
-  await MssqlExternalDataSource.testConnection(badOptions);
-} catch (error) {
-  console.log(error.cause); // Original error preserved
-}
+// Should fail with clear message
+await MssqlExternalDataSource.testConnection({ ...options, password: 'wrong' });
 ```
 
-## Kết luận (Conclusion)
+### Test Script 2: Introspection Test
 
-Sau khi phân tích và cải tiến, MSSQL data source plugin giờ đây:
+```javascript
+const superagent = require('superagent');
 
-1. **Tương đồng với PostgreSQL implementation** về authentication flow và version checking
-2. **Học hỏi từ external plugin** về validation và error handling
-3. **Duy trì architecture của NocoBase** với DataSource base class
-4. **Đảm bảo backward compatibility** với existing code
-5. **Tuân thủ best practices** về security và error handling
+// Login
+const loginRes = await superagent
+  .post('http://localhost:13001/api/auth:signIn')
+  .send({ values: { account: 'admin@nocobase.com', password: 'admin123' } });
 
-Luồng xử lý giờ đây rõ ràng và nhất quán với các data sources khác trong NocoBase ecosystem.
+const token = loginRes.body.data.token;
+
+// Get collections
+const collectionsRes = await superagent
+  .get('http://localhost:13001/api/dataSources.collections:list?associatedIndex=test&paginate=false')
+  .set('Authorization', `Bearer ${token}`);
+
+console.log('Collections:', collectionsRes.body.data.map(c => c.name));
+// Expected: ["dbo_Features", "dbo_Users", "identity_Clients", ...]
+```
+
+### Test Script 3: Data Fetching
+
+```javascript
+// Fetch records from dbo_Features
+const recordsRes = await superagent
+  .get('http://localhost:13001/api/dbo_Features:list?pageSize=10')
+  .set('Authorization', `Bearer ${token}`)
+  .set('x-data-source', 'test');
+
+console.log('Records:', recordsRes.body.data);
+```
+
+### Verification Checklist
+
+- [ ] Connection test passes ✅
+- [ ] Collections are introspected correctly ✅
+- [ ] Collection names use underscores (dbo_Features) ✅
+- [ ] Records can be fetched ✅
+- [ ] "Add field" button is visible in UI ✅
+- [ ] Multi-schema support works ✅
+- [ ] No server crashes during introspection ✅
+- [ ] Type mapping is correct ✅
+
+---
+
+## 🔧 Troubleshooting Guide
+
+### Issue: Server crashes during load
+
+**Check:**
+1. Are there collections with dots in names? → Use underscore normalization
+2. Are there tables with no primary key? → Check `inferFieldType` logic
+3. Are there BIGINT fields? → Verify type mapping uses 'bigInt' not 'bigint'
+
+### Issue: Collections not showing in UI
+
+**Check:**
+1. `introspected: true` is set
+2. Collection name doesn't contain dots
+3. `isExternal: true` is set
+4. Collection Manager filter allows introspected collections
+
+### Issue: "Add field" not working
+
+**Check:**
+1. Client registration has `disableAddFields: false`
+2. `autoGenId: false` is set on collections
+3. `timestamps: false` is set on collections
+
+---
+
+## 📚 References
+
+### NocoBase Core Classes
+
+- **DataSource**: `packages/core/data-source-manager/src/data-source.ts`
+- **Database**: `packages/core/database/src/database.ts`
+- **BaseDialect**: `packages/core/database/src/dialects/base-dialect.ts`
+- **SequelizeCollectionManager**: `packages/core/data-source-manager/src/sequelize-collection-manager.ts`
+
+### Related Plugins
+
+- **PostgreSQL Plugin**: `packages/plugins/@nocobase/plugin-data-source-postgres`
+- **External Plugin Example**: `trlongvn/nocobase-plugin-external-datasource-mssql`
+
+---
+
+## ✅ Kết luận (Conclusion)
+
+Plugin MSSQL External Data Source giờ đây:
+
+1. ✅ **Tương đồng với PostgreSQL implementation** về authentication và version checking
+2. ✅ **Hỗ trợ multi-schema** với proper separation của tableName và schema
+3. ✅ **Collection name normalization** để tránh conflicts với NocoBase routing
+4. ✅ **External collection support** với autoGenId và timestamps disabled
+5. ✅ **Field management enabled** trong UI
+6. ✅ **Comprehensive error handling** với error chaining
+7. ✅ **Type-safe implementation** với proper TypeScript types
+
+**Luồng xử lý giờ đây:**
+- Rõ ràng và nhất quán với các data sources khác
+- Tuân thủ NocoBase architecture patterns
+- Đảm bảo backward compatibility
+- Follow best practices về security và error handling
+
+---
+
+**Cập nhật:** 2026-01-16
+**Tác giả:** Development Team
+**Version:** 2.0.0

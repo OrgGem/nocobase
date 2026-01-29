@@ -22,14 +22,18 @@ type CollectionsFieldFactoryResult = {
 
 type CollectionsFieldFactory = (params: { NAMESPACE: string; t: any }) => CollectionsFieldFactoryResult;
 
-type MssqlConfigFormProps = {
+type PostgresConfigFormProps = {
   CollectionsTableField: CollectionsFieldFactory;
   loadCollections: (key: string) => Promise<any>;
   from?: 'create' | 'edit';
 };
 
-export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTableField, loadCollections, from }) => {
-  console.log('[MSSQL Plugin] ConfigForm rendering...');
+export const PostgresConfigForm: React.FC<PostgresConfigFormProps> = ({
+  CollectionsTableField,
+  loadCollections,
+  from,
+}) => {
+  console.log('[Postgres Plugin] ConfigForm rendering...');
   const api = useAPIClient();
   const form = useForm();
   const { t } = useTranslation();
@@ -38,19 +42,20 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
     NAMESPACE,
     t,
   });
+
   const handleTestConnection = useCallback(async () => {
     await form.submit();
     const values = form.values;
 
     try {
       await api.request({
-        url: 'external-mssql:testConnection',
+        url: 'dataSources:testConnection',
         method: 'post',
         data: values,
       });
       message.success(t('Connection successful'));
-    } catch (error) {
-      const errMessage = error?.response?.data?.message || error.message;
+    } catch (error: any) {
+      const errMessage = error?.response?.data?.errors?.[0]?.message || error?.response?.data?.message || error.message;
       message.error(errMessage);
       return;
     }
@@ -116,7 +121,7 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                   min: 1,
                   max: 65535,
                 },
-                default: 1433,
+                default: 5432,
               },
               database: {
                 type: 'string',
@@ -130,6 +135,7 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                 title: t('Schema'),
                 'x-decorator': 'FormItem',
                 'x-component': 'Input',
+                default: 'public',
               },
               username: {
                 type: 'string',
@@ -144,11 +150,12 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                 'x-decorator': 'FormItem',
                 'x-component': 'Password',
               },
-              encrypt: {
+              ssl: {
                 type: 'boolean',
-                title: t('Encrypt'),
+                title: t('Enable SSL'),
                 'x-decorator': 'FormItem',
                 'x-component': 'Checkbox',
+                description: t('Establish connection using SSL (Required for most cloud databases)'),
               },
               tablePrefix: {
                 type: 'string',
@@ -163,6 +170,15 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                 'x-component': 'Checkbox',
                 default: true,
               },
+              test: {
+                type: 'void',
+                'x-decorator': 'FormItem',
+                'x-component': 'Button',
+                'x-component-props': {
+                  onClick: '{{handleTestConnection}}',
+                },
+                title: t('Test connection'),
+              },
               collections: createCollectionsSchema(from, loadCollections),
             },
           },
@@ -172,4 +188,4 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
   );
 };
 
-export default MssqlConfigForm;
+export default PostgresConfigForm;

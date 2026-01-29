@@ -1,0 +1,13 @@
+{
+  "name": "@gemvn90/plugin-custom-route-path",
+  "version": "1.9.31",
+  "main": "dist/server/index.js",
+  "dependencies": {
+    "@nocobase/plugin-client": "1.9.30"
+  },
+  "peerDependencies": {
+    "@nocobase/client": "1.x",
+    "@nocobase/server": "1.x",
+    "@nocobase/test": "1.x"
+  }
+}

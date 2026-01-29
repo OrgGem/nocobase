@@ -8,7 +8,7 @@
  */
 
 import { ICollection, IRepository } from '@nocobase/data-source-manager';
-import { ElasticsearchCollectionManager } from './collection-manager';
+import { ElasticsearchCollectionManager } from './ElasticsearchCollectionManager';
 
 type FindOptions = {
   filter?: any;
@@ -200,7 +200,7 @@ export class ElasticsearchRepository implements IRepository {
     return hits.map((hit: any) => this.wrap(hit)).filter(Boolean);
   }
 
-  async findAndCount(options: FindOptions = {}) {
+  async findAndCount(options: FindOptions = {}): Promise<[any[], number]> {
     const { hits, total } = await this.search(options);
     const rows = hits.map((hit: any) => this.wrap(hit)).filter(Boolean);
     return [rows, total];
@@ -343,5 +343,119 @@ export class ElasticsearchRepository implements IRepository {
 
   async toggle() {
     throw new Error('Elasticsearch repository does not support relation toggle operation');
+  }
+
+  /**
+   * Scroll-based iteration for large datasets
+   */
+  async chunkWithScroll(
+    options: FindOptions & {
+      chunkSize?: number;
+      callback: (rows: any[], options: FindOptions) => Promise<void>;
+    },
+  ) {
+    const { filter, chunkSize = 100, callback, sort } = options;
+    const scroll = '1m';
+
+    const searchBody: any = {
+      query: this.buildQuery(filter),
+      size: chunkSize,
+      track_total_hits: true,
+    };
+
+    const normalizedSort = this.normalizeSort(sort);
+    if (normalizedSort.length) {
+      searchBody.sort = normalizedSort;
+    }
+
+    const initRes: any = await this.client.scrollSearch({
+      index: this.index,
+      body: searchBody,
+      scroll,
+    });
+
+    const initBody = initRes?.body || initRes || {};
+    let scrollId = initBody._scroll_id;
+    let hits = initBody?.hits?.hits || [];
+
+    try {
+      while (hits.length > 0) {
+        const rows = hits.map((hit: any) => this.wrap(hit)).filter(Boolean);
+        await callback(rows, options);
+
+        const scrollRes: any = await this.client.scroll({
+          scrollId,
+          scroll,
+        });
+
+        const scrollBody = scrollRes?.body || scrollRes || {};
+        scrollId = scrollBody._scroll_id;
+        hits = scrollBody?.hits?.hits || [];
+      }
+    } finally {
+      if (scrollId) {
+        await this.client.scrollClear({ scrollId });
+      }
+    }
+  }
+
+  async bulkCreate(options: { values: any[] }) {
+    const { values } = options;
+    if (!values || !values.length) return [];
+
+    const operations = [];
+    for (const value of values) {
+      const { id, ...rest } = value;
+      operations.push({ index: { _index: this.index, _id: id } });
+      operations.push(rest);
+    }
+
+    // We don't parse the detailed response here for performance, assuming success if no error thrown
+    // In a production environment, you might want to check res.errors and specific item errors
+    await this.client.bulk({ operations });
+    return values;
+  }
+
+  async bulkUpdate(options: { filter?: any; values: any; forceUpdate?: boolean }) {
+    const { filter, values } = options;
+
+    // If we have a filter, we first need to find the IDs to update (ES doesn't support update by query with custom script easily here without more logic)
+    // A better approach for bulk update by filter is: find IDs -> bulk update by IDs
+
+    // However, standard bulk operations usually expect explicit IDs.
+    // If 'values' is an array of objects with IDs, we can just bulk update them.
+
+    // This implementation mimics NocoBase's repository bulkUpdate which often implies updating multiple records with same values or specific values.
+    // Simplified: Find records -> Bulk Update
+
+    const targets = await this.find({ filter, limit: 10000 }); // limit 10000 is ES default max window
+    if (!targets.length) return [];
+
+    const operations = [];
+    for (const item of targets) {
+      operations.push({ update: { _index: this.index, _id: item.id } });
+      operations.push({ doc: values });
+    }
+
+    if (operations.length) {
+      await this.client.bulk({ operations });
+    }
+    return targets;
+  }
+
+  async bulkDestroy(options: { filter?: any }) {
+    const { filter } = options;
+
+    const targets = await this.find({ filter, limit: 10000 });
+    if (!targets.length) return;
+
+    const operations = [];
+    for (const item of targets) {
+      operations.push({ delete: { _index: this.index, _id: item.id } });
+    }
+
+    if (operations.length) {
+      await this.client.bulk({ operations });
+    }
   }
 }

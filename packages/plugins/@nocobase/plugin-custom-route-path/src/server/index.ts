@@ -8,5 +8,3 @@
  */
 
 export { default } from './plugin';
-export { PluginElasticsearchDataSourceServer } from './plugin';
-export { ElasticsearchDataSource, ElasticsearchCollectionManager, ElasticsearchRepository } from './data-source';

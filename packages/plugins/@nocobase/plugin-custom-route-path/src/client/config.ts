@@ -7,6 +7,5 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-export { default } from './plugin';
-export { PluginElasticsearchDataSourceServer } from './plugin';
-export { ElasticsearchDataSource, ElasticsearchCollectionManager, ElasticsearchRepository } from './data-source';
+export const CUSTOM_PATH_ENABLED = true;
+export const BASIC_PATH = '/app'; // Default app path (separate from /admin system routes);

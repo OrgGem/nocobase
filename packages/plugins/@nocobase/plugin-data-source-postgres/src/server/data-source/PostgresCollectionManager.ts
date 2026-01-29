@@ -7,6 +7,10 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-export { default } from './plugin';
-export { PluginElasticsearchDataSourceServer } from './plugin';
-export { ElasticsearchDataSource, ElasticsearchCollectionManager, ElasticsearchRepository } from './data-source';
+import { SequelizeCollectionManager } from '@nocobase/data-source-manager';
+
+export class PostgresCollectionManager extends SequelizeCollectionManager {
+  removeCollection(name: string) {
+    this.db.removeCollection(name);
+  }
+}

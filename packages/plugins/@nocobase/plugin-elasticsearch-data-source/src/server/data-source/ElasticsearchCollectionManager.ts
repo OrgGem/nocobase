@@ -8,7 +8,7 @@
  */
 
 import { CollectionManager, CollectionOptions } from '@nocobase/data-source-manager';
-import { ElasticsearchRepository } from './repository';
+import { ElasticsearchRepository } from './ElasticsearchRepository';
 
 type LocalCollections = Record<string, CollectionOptions>;
 
@@ -144,6 +144,16 @@ export class ElasticsearchCollectionManager extends CollectionManager {
       } else {
         this.defineCollection(options);
       }
+    }
+  }
+
+  /**
+   * Remove a collection from the collection manager
+   */
+  removeCollection(name: string) {
+    const collections = (this as any).collections as Map<string, any>;
+    if (collections?.has?.(name)) {
+      collections.delete(name);
     }
   }
 }

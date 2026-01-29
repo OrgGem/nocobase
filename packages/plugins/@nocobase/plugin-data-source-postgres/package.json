@@ -1,0 +1,27 @@
+{
+    "name": "@gemvn90/plugin-data-source-postgres",
+    "displayName": "Data source: PostgreSQL",
+    "displayName.zh-CN": "数据源：PostgreSQL",
+    "version": "1.0.1",
+    "description": "External PostgreSQL data source support for NocoBase.",
+    "license": "AGPL-3.0",
+    "main": "./dist/index.js",
+    "keywords": [
+        "Data sources"
+    ],
+    "files": [
+        "dist"
+    ],
+    "dependencies": {
+        "pg": "^8.11.3",
+        "pg-hstore": "^2.3.4"
+    },
+    "peerDependencies": {
+        "@nocobase/client": "1.x",
+        "@nocobase/database": "1.x",
+        "@nocobase/data-source-manager": "1.x",
+        "@nocobase/plugin-data-source-manager": "1.x",
+        "@nocobase/server": "1.x",
+        "@nocobase/test": "1.x"
+    }
+}

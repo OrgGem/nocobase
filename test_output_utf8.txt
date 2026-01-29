@@ -1,0 +1,26 @@
+﻿yarn run v1.22.22
+$ nocobase test packages/plugins/@nocobase/plugin-data-source-manager/src/server/__tests__/data-source-collections-api.test.ts
+process.env.TEST_ENV server-side [
+  '--max_old_space_size=14096',
+  './node_modules/vitest/vitest.mjs',
+  'packages/plugins/@nocobase/plugin-data-source-manager/src/server/__tests__/data-source-collections-api.test.ts',
+  '--run',
+  '--poolOptions.threads.singleThread=true'
+]
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.5.2[39m [90mD:/Git/nocobase[39m
+
+[90mstdout[2m | packages/plugins/@nocobase/plugin-data-source-manager/src/server/__tests__/data-source-collections-api.test.ts[2m > [22m[2mdata source collection api[2m > [22m[2mshould get and create collection[22m[39m
+2026-01-22 16:12:01 [debug] create database instance: {"sync":{"alter":{"drop":false},"force":false},"dialect":"sqlite","logging":false,"define":{"charset":"utf8mb4","collate":"utf8mb4_unicode_ci"},"underscored":false,"dialectOptions":{},"rawTimezone":"+00:00"} databaseInstanceId=_ZNzNhhwvRjidZPctBojt
+
+ [33mΓ¥»[39m packages/plugins/@nocobase/plugin-data-source-manager/src/server/__tests__/data-source-collections-api.test.ts [2m ([22m[2m1 test[22m [2m|[22m [31m1 failed[39m[2m)[22m[90m 43[2mms[22m[39m
+[31m   [33mΓ¥»[31m packages/plugins/@nocobase/plugin-data-source-manager/src/server/__tests__/data-source-collections-api.test.ts[2m > [22mdata source collection api[2m > [22mshould get and create collection[39m
+[31m     ΓåÆ Please install sqlite3 package manually[39m
+[31m     ΓåÆ Cannot read properties of undefined (reading 'destroy')[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m   Start at [22m 16:11:55
+[2m   Duration [22m 6.04s[2m (transform 2.24s, setup 118ms, collect 5.58s, tests 43ms, environment 0ms, prepare 119ms)[22m
+
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

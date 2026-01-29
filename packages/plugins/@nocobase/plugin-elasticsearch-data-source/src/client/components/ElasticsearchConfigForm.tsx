@@ -22,14 +22,17 @@ type CollectionsFieldFactoryResult = {
 
 type CollectionsFieldFactory = (params: { NAMESPACE: string; t: any }) => CollectionsFieldFactoryResult;
 
-type MssqlConfigFormProps = {
+type ElasticsearchConfigFormProps = {
   CollectionsTableField: CollectionsFieldFactory;
   loadCollections: (key: string) => Promise<any>;
   from?: 'create' | 'edit';
 };
 
-export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTableField, loadCollections, from }) => {
-  console.log('[MSSQL Plugin] ConfigForm rendering...');
+export const ElasticsearchConfigForm: React.FC<ElasticsearchConfigFormProps> = ({
+  CollectionsTableField,
+  loadCollections,
+  from,
+}) => {
   const api = useAPIClient();
   const form = useForm();
   const { t } = useTranslation();
@@ -38,18 +41,19 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
     NAMESPACE,
     t,
   });
+
   const handleTestConnection = useCallback(async () => {
     await form.submit();
     const values = form.values;
 
     try {
       await api.request({
-        url: 'external-mssql:testConnection',
+        url: 'external-elasticsearch:testConnection',
         method: 'post',
         data: values,
       });
       message.success(t('Connection successful'));
-    } catch (error) {
+    } catch (error: any) {
       const errMessage = error?.response?.data?.message || error.message;
       message.error(errMessage);
       return;
@@ -85,6 +89,9 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
             required: true,
             'x-decorator': 'FormItem',
             'x-component': 'Input',
+            'x-component-props': {
+              disabled: from === 'edit',
+            },
           },
           displayName: {
             type: 'string',
@@ -103,38 +110,12 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                 'x-decorator': 'FormItem',
                 'x-component': 'Input',
                 'x-component-props': {
-                  placeholder: 'localhost',
+                  placeholder: 'https://localhost:9200',
                 },
-              },
-              port: {
-                type: 'number',
-                title: t('Port'),
-                required: true,
-                'x-decorator': 'FormItem',
-                'x-component': 'InputNumber',
-                'x-component-props': {
-                  min: 1,
-                  max: 65535,
-                },
-                default: 1433,
-              },
-              database: {
-                type: 'string',
-                title: t('Database'),
-                required: true,
-                'x-decorator': 'FormItem',
-                'x-component': 'Input',
-              },
-              schema: {
-                type: 'string',
-                title: t('Schema'),
-                'x-decorator': 'FormItem',
-                'x-component': 'Input',
               },
               username: {
                 type: 'string',
                 title: t('Username'),
-                required: true,
                 'x-decorator': 'FormItem',
                 'x-component': 'Input',
               },
@@ -144,17 +125,16 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                 'x-decorator': 'FormItem',
                 'x-component': 'Password',
               },
-              encrypt: {
-                type: 'boolean',
-                title: t('Encrypt'),
-                'x-decorator': 'FormItem',
-                'x-component': 'Checkbox',
-              },
-              tablePrefix: {
-                type: 'string',
-                title: t('Table prefix'),
-                'x-decorator': 'FormItem',
-                'x-component': 'Input',
+              tls: {
+                type: 'object',
+                properties: {
+                  skipVerify: {
+                    type: 'boolean',
+                    title: t('Skip SSL verification'),
+                    'x-decorator': 'FormItem',
+                    'x-component': 'Checkbox',
+                  },
+                },
               },
               addAllCollections: {
                 type: 'boolean',
@@ -162,6 +142,15 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
                 'x-decorator': 'FormItem',
                 'x-component': 'Checkbox',
                 default: true,
+              },
+              test: {
+                type: 'void',
+                'x-decorator': 'FormItem',
+                'x-component': 'Button',
+                'x-component-props': {
+                  onClick: '{{handleTestConnection}}',
+                },
+                title: t('Test connection'),
               },
               collections: createCollectionsSchema(from, loadCollections),
             },
@@ -172,4 +161,4 @@ export const MssqlConfigForm: React.FC<MssqlConfigFormProps> = ({ CollectionsTab
   );
 };
 
-export default MssqlConfigForm;
+export default ElasticsearchConfigForm;

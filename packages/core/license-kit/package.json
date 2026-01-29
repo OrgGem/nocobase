@@ -1,0 +1,6 @@
+{
+    "name": "@nocobase/license-kit",
+    "version": "1.0.0",
+    "main": "index.js",
+    "description": "Mock license-kit for development"
+}

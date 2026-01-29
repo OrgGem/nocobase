@@ -7,6 +7,10 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-export { default } from './plugin';
-export { PluginElasticsearchDataSourceServer } from './plugin';
-export { ElasticsearchDataSource, ElasticsearchCollectionManager, ElasticsearchRepository } from './data-source';
+export {
+  ElasticsearchDataSource,
+  ElasticsearchDataSourceOptions,
+  HttpElasticsearchClient,
+} from './ElasticsearchDataSource';
+export { ElasticsearchCollectionManager } from './ElasticsearchCollectionManager';
+export { ElasticsearchRepository } from './ElasticsearchRepository';
